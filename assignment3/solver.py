@@ -5,49 +5,81 @@ import numpy as np
 import numpy.ma as ma
 import warnings
 
+# set search order
+#edge_counts = edge_mat.sum(axis=0)
 
-def greedy(node_count, edge_list):
-   
-    solution = np.full([node_count], np.nan, dtype=np.int8)
+#edge_counts_paired = np.stack([ np.arange(0, node_count), edge_counts ])
+#temp_copy = edge_counts_paired.copy()
+#temp_copy[1,:] = -temp_copy[1,:]
 
-    colors_used = np.zeros(0, dtype=np.int8)
+#edge_counts_paired = edge_counts_paired[:, np.lexsort(temp_copy)]
+
+class GreedySolver:
+    def __init__(self, node_count, edge_list):
+        self.node_count = node_count
+        self.edge_list = edge_list
+        self.reset()
     
-    # build edge matrix
-    edge_mat = np.zeros([node_count, node_count], dtype=np.int8)
-    
-    for edge_pair in edge_list:
-        edge_mat[edge_pair[0], edge_pair[1]] = 1
-        edge_mat[edge_pair[1], edge_pair[0]] = 1
-    
-    # initialize constraint matrix
-    con_mat = np.full([node_count, node_count], np.nan)
-    
-    # set search order
-    edge_counts = edge_mat.sum(axis=0)
-    
-    edge_counts_paired = np.stack([ np.arange(0, node_count), edge_counts ])
-    temp_copy = edge_counts_paired.copy()
-    temp_copy[1,:] = -temp_copy[1,:]
-    
-    edge_counts_paired = edge_counts_paired[:, np.lexsort(temp_copy)]
-    
-    # assign number to solution
-    for ind in range(node_count):
-        node = edge_counts_paired[0, ind]
+    def reset(self):
+        self.nodes_colored = np.zeros(0, dtype=np.int8)
+        self.colors_used = np.zeros(0, dtype=np.int8)
+        self.solution = np.full([self.node_count], np.nan, dtype=np.int8)
         
-        available_colors = np.setdiff1d(colors_used, con_mat[node])
+        # build edge matrix
+        self.edge_mat = np.zeros([self.node_count, self.node_count], dtype=np.int8)
+        
+        for edge_pair in self.edge_list:
+            self.edge_mat[edge_pair[0], edge_pair[1]] = 1
+            self.edge_mat[edge_pair[1], edge_pair[0]] = 1
+        
+        # count total constraints
+        self.total_cons = self.edge_mat.sum(axis=0)
+        
+        # initialize constraint matrix
+        self.con_mat = np.full([self.node_count, self.node_count], np.nan)
+    
+    def find_next_node_most_initial_constraints(self):
+        
+    def find_next_node_most_constrained(self):
+        num_constraints = np.count_nonzero(~np.isnan(self.con_mat), axis=0)-self.total_cons
+        num_constraints_paired = np.stack([ np.arange(0, self.node_count), num_constraints ])
+        uncolored_nodes = np.setdiff1d( np.arange(0, self.node_count, dtype=np.int8), self.nodes_colored )
+        available_num_constraints_paired = num_constraints_paired[:, uncolored_nodes]
+        available_most_constrained = available_num_constraints_paired[:, np.lexsort(available_num_constraints_paired)]
+        node = available_most_constrained[0][0]
+            
+        return node
+    
+    def choose_color_min_value(self, node):
+        available_colors = np.setdiff1d(self.colors_used, self.con_mat[node])
         if len(available_colors) == 0:
-            color = len(colors_used)
-            colors_used = np.append(colors_used, color) 
+            color = len(self.colors_used)
+            self.colors_used = np.append(self.colors_used, color) 
         else:
             color = np.nanmin(available_colors)
-
-        con_mat[node, edge_mat[node]==1] = color
-        con_mat[edge_mat[node]==1, node] = color
+            
+        return color
+    
+    def solve(self):
+        self.reset()
         
-        solution[node] = color
+        # assign number to solution
+        for ind in range(self.node_count):
+            # find node
+            node = self.find_next_node_most_constrained()
+            
+            self.nodes_colored = np.append(self.nodes_colored, node)
+            
+            # find color
+            color = self.choose_color_min_value(node)
+    
+            # set color and update constraints
+            self.con_mat[node, self.edge_mat[node]==1] = color
+            self.con_mat[self.edge_mat[node]==1, node] = color
+            
+            self.solution[node] = color
         
-    return solution
+        return self.solution
 
 def solve_it(input_data):
     # Modify this code to run your optimization algorithm
@@ -67,7 +99,8 @@ def solve_it(input_data):
         edge_list.append((int(parts[0]), int(parts[1])))
 
     # run a solver
-    solution = greedy(node_count, edge_list)
+    solver = GreedySolver(node_count, edge_list)
+    solution = solver.solve()
 
     # prepare the solution in the specified output format
     output_data = str(solution.max()+1) + ' ' + str(0) + '\n'
