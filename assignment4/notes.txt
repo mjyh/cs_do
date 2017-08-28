@@ -1,0 +1,6 @@
+- implement greedy solver
+- implement uncrosser
+- implement check all start locations
+- implement 2 opt
+- implement 3 opt
+- implement k opt
