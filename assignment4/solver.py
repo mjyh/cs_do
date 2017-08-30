@@ -39,54 +39,22 @@ def find_next_node_greedy(node_count, points, solution):
     
     return next_node
 
-def is_crossed(points, p_1, p_2, p_3, p_4 ):
-    p_1_x, p_1_y = points[p_1][0],  points[p_1][1]
-    p_2_x, p_2_y = points[p_2][0],  points[p_2][1]
-    p_3_x, p_3_y = points[p_3][0],  points[p_3][1]
-    p_4_x, p_4_y = points[p_4][0],  points[p_4][1]
-    
-    if (max(p_1_x, p_2_x) < min(p_3_x, p_4_x)) or (max(p_3_x, p_4_x) < min(p_1_x, p_2_x) ):
-        return False
-    
-    if (max(p_1_y, p_2_y) < min(p_3_y, p_4_y)) or (max(p_3_y, p_4_y) < min(p_1_y, p_2_y) ):
-        return False
-    
-    # we do not handle overlapping vertical lines
-    if p_1_x == p_2_x == p_3_x == p_4_x:
-        return False
-    
-    slope_12 = (p_2_y - p_1_y)/(p_2_x-p_1_x)
-    slope_34 = (p_4_y - p_3_y)/(p_4_x-p_3_x)
-    
-    # if parallel and not overlapping, return false
-    # if parallel and overlapping, we don't handle those
-    if slope_12 == slope_34:
-        return False
-    
-    int_12 = p_1_y - slope_12*p_1_x
-    int_34 = p_3_y - slope_12*p_3_x
-    
-    x_intersection = (int_34 - int_12) / (slope_12 - slope_34)
-    
-    if (x_intersection > max(p_1_x, p_2_x)) or (x_intersection > max(p_3_x, p_4_x)):
-        return False
-    elif (x_intersection < min(p_1_x, p_2_x)) or (x_intersection < min(p_3_x, p_4_x)):
-        return False
-    else:
-        return True
-    
-
-def is_crossed(p_1, p_2, p_3, p_4, points):
-    
-def uncrosser_helper(node_count, points, solution):
+def twoOpt(node_count, points, solution):
     for ind_a in range(node_count-2):
         p_1 = solution[ind_a]
         p_2 = solution[ind_a + 1]
+        d_12 = length(points[p_1], points[p_2])
         for ind_b in range(ind_a+2, node_count):
             p_3 = solution[ind_b]
             p_4 = solution[(ind_b + 1)%node_count]
-            if is_crossed(points, p_1, p_2, p_3, p_4 )
-                uncross(solution, p_1, p_2, p_3, p_4 )
+            d_34 = length(points[p_3], points[p_4])
+            d_13 = length(points[p_1], points[p_3])
+            d_24 = length(points[p_2], points[p_4])
+            if d_12 + d_34 > d_13 + d_24:
+                solution[ind_a + 1] = p_3
+                solution[ind_b] = p_2
+                solution[ind_a + 2:ind_b] = np.flip(solution[ind_a + 2:ind_b], axis=0)
+                print("found cross at %s, %s" % (ind_a, ind_b))
                 return True
     return False
     
@@ -99,9 +67,9 @@ def greedyTSP(node_count, points):
         next_node = find_next_node_greedy(node_count, points, solution)
         solution = np.append(solution, next_node)
     
-    had_crosses = True
-    while had_crosses:
-        had_crosses = uncrosser_helper(node_count, points, solution)
+    had_changes = True
+    while had_changes:
+        had_changes = twoOpt(node_count, points, solution)
 
     
     return solution
@@ -153,7 +121,7 @@ if __name__ == '__main__':
     p5 = r'./data/tsp_1889_1'
     p6 = r'./data/tsp_33810_1'
     all_problems = [p1, p2, p3, p4, p5, p6]
-    target_problems = [p6]
+    target_problems = [p1]
     #target_problems = all_problems
     for file_location in target_problems:
         with open(file_location, 'r') as input_data_file:
