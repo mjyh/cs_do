@@ -68,7 +68,7 @@ def twoOpt(node_count, points, solution, start_time, min_change, time_limit):
                 
                 improvement = d_12 + d_34 - d_13 - d_24
                 initial_path_length = calc_solution_length(node_count, points, solution)
-                print("found cross at %s, %s | new path length: %.2f | improved by %.2f" % (ind_a, ind_b, initial_path_length, improvement))
+                #print("found cross at %s, %s | new path length: %.2f | improved by %.2f" % (ind_a, ind_b, initial_path_length, improvement))
                 
                 return True
             iterations += 1
@@ -80,31 +80,8 @@ def twoOpt(node_count, points, solution, start_time, min_change, time_limit):
                     return False
 
     return False
-    
-def greedyTSP(node_count, points):
-    
-    time_limit = 120
-    min_change = 0.0
-    start_node = 0
-    if node_count == 51:
-        problem = 'p1'
-    elif node_count == 100:
-        problem = 'p2'
-    elif node_count == 200:
-        problem = 'p3'
-    elif node_count == 574:
-        problem = 'p4'
-    elif node_count == 1889:
-        problem = 'p5'
-    else:
-        problem = 'p6'
-        start_node = 12345
-        time_limit = 120
-        min_change = 5000
-    
-    print("solving %s" % problem)
-    
-    
+
+def solve_with_start_node(node_count, points, start_node, time_limit, min_change):
     
     solution = np.array([start_node], np.int)
     for ind in range(node_count-1):
@@ -127,8 +104,45 @@ def greedyTSP(node_count, points):
             if current_time - start_time > 120:
                 print("breaking after running too long")
                 break
-
+            
     return solution
+            
+def greedyTSP(node_count, points):
+    
+    time_limit = 120
+    min_change = 0.0
+    start_node = 0
+    if node_count == 51:
+        problem = 'p1'
+    elif node_count == 100:
+        problem = 'p2'
+    elif node_count == 200:
+        problem = 'p3'
+    elif node_count == 574:
+        problem = 'p4'
+    elif node_count == 1889:
+        problem = 'p5'
+    else:
+        problem = 'p6'
+        start_node = 0
+        time_limit = 120
+        min_change = 5000
+    
+    print("solving %s" % problem)
+    
+    if problem in ['p1', 'p2']:
+        best_solution = None
+        for start_node in range(node_count):
+            new_solution = solve_with_start_node(node_count, points, start_node, time_limit, min_change)
+            if best_solution is None:
+                best_solution = new_solution
+            if calc_solution_length(node_count, points, new_solution) < calc_solution_length(node_count, points, best_solution):
+                best_solution = new_solution
+        best_solution = best_solution
+    else:
+        best_solution = solve_with_start_node(node_count, points, start_node, time_limit, min_change)
+    
+    return best_solution
 
 def solve_it(input_data):
     gc.collect()
@@ -173,7 +187,7 @@ if __name__ == '__main__':
     p5 = r'./data/tsp_1889_1'
     p6 = r'./data/tsp_33810_1'
     all_problems = [p1, p2, p3, p4, p5, p6]
-    target_problems = [p6]
+    target_problems = [p2]
     #target_problems = all_problems
     for file_location in target_problems:
         with open(file_location, 'r') as input_data_file:
