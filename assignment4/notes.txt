@@ -2,5 +2,7 @@
 - implement uncrosser
 - implement check all start locations
 - implement 2 opt
+- sort search order by path length
+- vectorize 2 opt
 - implement 3 opt
 - implement k opt

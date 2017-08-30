@@ -7,12 +7,20 @@ import numpy as np
 import sys
 import gc
 import scipy as sp 
+import time
 
 Point = namedtuple("Point", ['x', 'y'])
 
 def length(point1, point2):
     return math.sqrt((point1[0] - point2[0])**2 + (point1[1] - point2[1])**2)
 
+def calc_solution_length(node_count, points, solution):
+    obj = length(points[solution[-1]], points[solution[0]])
+    for index in range(0, node_count-1):
+        obj += length(points[solution[index]], points[solution[index+1]])
+    
+    return obj
+    
 def calc_distance_mat(node_count, points):
     #distance_mat = np.zeros([node_count, node_count])
     #for row in range(node_count):
@@ -39,7 +47,9 @@ def find_next_node_greedy(node_count, points, solution):
     
     return next_node
 
-def twoOpt(node_count, points, solution):
+def twoOpt(node_count, points, solution, start_time, min_change, time_limit):
+
+    iterations = 0
     for ind_a in range(node_count-2):
         p_1 = solution[ind_a]
         p_2 = solution[ind_a + 1]
@@ -50,28 +60,74 @@ def twoOpt(node_count, points, solution):
             d_34 = length(points[p_3], points[p_4])
             d_13 = length(points[p_1], points[p_3])
             d_24 = length(points[p_2], points[p_4])
-            if d_12 + d_34 > d_13 + d_24:
+            if d_12 + d_34 > d_13 + d_24 + min_change:
                 solution[ind_a + 1] = p_3
                 solution[ind_b] = p_2
                 solution[ind_a + 2:ind_b] = np.flip(solution[ind_a + 2:ind_b], axis=0)
-                print("found cross at %s, %s" % (ind_a, ind_b))
+                
+                
+                improvement = d_12 + d_34 - d_13 - d_24
+                initial_path_length = calc_solution_length(node_count, points, solution)
+                print("found cross at %s, %s | new path length: %.2f | improved by %.2f" % (ind_a, ind_b, initial_path_length, improvement))
+                
                 return True
+            iterations += 1
+            if iterations%10000 == 0:
+                #print("checking %s" % iterations)
+                current_time = time.time()
+                if current_time - start_time > time_limit:
+                    print("breaking after running too long")
+                    return False
+
     return False
     
 def greedyTSP(node_count, points):
+    
+    time_limit = 120
+    min_change = 0.0
     start_node = 0
+    if node_count == 51:
+        problem = 'p1'
+    elif node_count == 100:
+        problem = 'p2'
+    elif node_count == 200:
+        problem = 'p3'
+    elif node_count == 574:
+        problem = 'p4'
+    elif node_count == 1889:
+        problem = 'p5'
+    else:
+        problem = 'p6'
+        start_node = 12345
+        time_limit = 120
+        min_change = 5000
+    
+    print("solving %s" % problem)
+    
+    
+    
     solution = np.array([start_node], np.int)
     for ind in range(node_count-1):
-        if not ind%1000:
-            print(sys.stderr, "iteration %s" % ind)
+        if not ind%5000:
+            print("initial_solution: iteration %s" % ind)
         next_node = find_next_node_greedy(node_count, points, solution)
         solution = np.append(solution, next_node)
     
-    had_changes = True
-    while had_changes:
-        had_changes = twoOpt(node_count, points, solution)
-
+    initial_path_length = calc_solution_length(node_count, points, solution)
+    print("initial path length: %.2f" % initial_path_length)
     
+    had_changes = True
+    iterations = 0
+    start_time = time.time()
+    while had_changes:
+        had_changes = twoOpt(node_count, points, solution, start_time, min_change, time_limit)
+        iterations += 1
+        if not iterations%10:
+            current_time = time.time()
+            if current_time - start_time > 120:
+                print("breaking after running too long")
+                break
+
     return solution
 
 def solve_it(input_data):
@@ -85,8 +141,6 @@ def solve_it(input_data):
 
     points = np.ndarray([node_count, 2])
     for i in range(1, node_count+1):
-        if not i%1000:
-            print("iteration %s" % i)
         line = lines[i]
         parts = line.split()
         points[i-1][0] = parts[0] 
@@ -103,9 +157,7 @@ def solve_it(input_data):
     solution = greedyTSP(node_count, points)
     
     # calculate the length of the tour
-    obj = length(points[solution[-1]], points[solution[0]])
-    for index in range(0, node_count-1):
-        obj += length(points[solution[index]], points[solution[index+1]])
+    obj = calc_solution_length(node_count, points, solution)
 
     # prepare the solution in the specified output format
     output_data = '%.2f' % obj + ' ' + str(0) + '\n'
@@ -121,7 +173,7 @@ if __name__ == '__main__':
     p5 = r'./data/tsp_1889_1'
     p6 = r'./data/tsp_33810_1'
     all_problems = [p1, p2, p3, p4, p5, p6]
-    target_problems = [p1]
+    target_problems = [p6]
     #target_problems = all_problems
     for file_location in target_problems:
         with open(file_location, 'r') as input_data_file:
