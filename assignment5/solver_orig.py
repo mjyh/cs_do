@@ -22,8 +22,9 @@ def solve_it(input_data):
     parts = lines[0].split()
     facility_count = int(parts[0])
     customer_count = int(parts[1])
+    
     facility_locations = np.zeros([facility_count, 2])
-    capaciity = np.zeros([faciility_count])
+    capacity = np.zeros([facility_count])
     customer_locations = np.zeros([customer_count, 2])
     demand = np.zeros([customer_count])
     
@@ -82,4 +83,4 @@ if __name__ == '__main__':
         print(solve_it(input_data))
     else:
         print('This test requires an input file.  Please select one from the data directory. (i.e. python solver.py ./data/fl_16_2)')
-
+        
